@@ -4,8 +4,9 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     src: string;
     alt: string;
     priority?: boolean;
-    className?: string; // Applied to the wrapper div
-    imgClassName?: string; // Applied to the img element
+    className?: string;
+    imgClassName?: string;
+    sizes?: string;
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({
@@ -14,6 +15,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
     priority = false,
     className = "",
     imgClassName = "",
+    sizes,
     ...props
 }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -26,20 +28,20 @@ const LazyImage: React.FC<LazyImageProps> = ({
             const baseUrl = src.split('?')[0];
             const params = new URLSearchParams(src.split('?')[1]);
 
-            const getUrl = (width: number) => {
+            const getUrl = (width: number, quality: number = 80) => {
                 const newParams = new URLSearchParams(params);
                 newParams.set('w', width.toString());
-                newParams.set('q', '80');
+                newParams.set('q', quality.toString());
                 newParams.set('auto', 'format');
                 return `${baseUrl}?${newParams.toString()}`;
             };
 
             setSrcSet(`
-        ${getUrl(300)} 300w,
-        ${getUrl(600)} 600w,
-        ${getUrl(900)} 900w,
-        ${getUrl(1200)} 1200w,
-        ${getUrl(2000)} 2000w
+        ${getUrl(300, 60)} 300w,
+        ${getUrl(600, 70)} 600w,
+        ${getUrl(900, 75)} 900w,
+        ${getUrl(1200, 80)} 1200w,
+        ${getUrl(2000, 80)} 2000w
       `);
         } else {
             setSrcSet(undefined);
@@ -57,10 +59,12 @@ const LazyImage: React.FC<LazyImageProps> = ({
             <img
                 src={currentSrc}
                 srcSet={srcSet}
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes={sizes || "(max-width: 768px) 100vw, 50vw"}
                 alt={alt}
                 loading={priority ? 'eager' : 'lazy'}
                 decoding={priority ? 'sync' : 'async'}
+                // @ts-ignore - React 19 / Modern browsers support fetchpriority but types might lag
+                fetchPriority={priority ? 'high' : 'auto'}
                 onLoad={() => setIsLoaded(true)}
                 className={`transition-opacity duration-700 ease-in-out ${isLoaded ? 'opacity-100' : 'opacity-0'
                     } ${imgClassName}`}
